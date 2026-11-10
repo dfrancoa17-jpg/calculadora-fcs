@@ -444,7 +444,7 @@
             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; text-align: left;">
                 <div class="form-group">
                     <label>Correo Electrónico</label>
-                    <input type="email" id="loginEmail" placeholder="taller@francos.com">
+                    <input type="email" id="loginEmail" placeholder="francospubli@francos.com">
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>
@@ -469,7 +469,7 @@
         <div class="client-list" id="clientList">
             <!-- Los clientes guardados se cargan desde la nube -->
         </div>
-        <button style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.85rem; margin-top: auto; padding: 10px;" onclick="cerrarSesion()">Cerrar Sesión 🔓</button>
+        <button style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.85rem; margin-top: auto; padding: 10px;" onclick="cerrarSesion()">Cerrar Sesión</button>
     </div>
 
     <!-- Panel Principal: Constructor de Cotización -->
@@ -659,7 +659,7 @@
                     tipo: productoSeleccionado,
                     ancho, alto, area,
                     resumenText: `${productoSeleccionado} (${ancho}m x ${alto}m - ${area.toFixed(2)} m²)`,
-                    detalleTecnico: `• Impresión: ${area.toFixed(2)} m²\n• Estructura y Soportes: ${cantidadTubosTotal} tiras de ${tipoTubo} (${soportes} soporte(s))\n• Subtotal: $${subtotal.toFixed(2)}`,
+                    detalleTecnico: `• Impresión: ${area.toFixed(2)} m²\n• Estructura y Soportes: ${cantidadTubosTotal} Tubos de ${tipoTubo} (${soportes} soporte(s))\n• Subtotal: $${subtotal.toFixed(2)}`,
                     subtotal
                 };
 
@@ -672,7 +672,7 @@
                     tipo: productoSeleccionado,
                     ancho, alto, area,
                     resumenText: `${productoSeleccionado} (${ancho}m x ${alto}m - ${area.toFixed(2)} m²)`,
-                    detalleTecnico: `• Impresión Vidriera: ${area.toFixed(2)} m²\n• Instalación (30%)\n• Subtotal: $${subtotal.toFixed(2)}`,
+                    detalleTecnico: `• Impresión Microperforado: ${area.toFixed(2)} m²\n• Instalación (30%)\n• Subtotal: $${subtotal.toFixed(2)}`,
                     subtotal
                 };
 
@@ -791,7 +791,7 @@
                 return;
             }
 
-            alert('¡Guardado exitosamente en la nube!');
+            alert(`"${nombre}" guardado exitosamente!`);
             cargarClientesDesdeNube();
             resetFormulario();
         }
