@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizador Profesional - Vallas y Publicidad</title>
+    <!-- Librería de Supabase para la nube y seguridad -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-main: #121214;
+            --bg-card: #1a1a1e;
+            --bg-card-hover: #222228;
+            --border-color: #2e2e38;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --warning-yellow: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- PANTALLA DE LOGIN --- */
+        #loginScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .login-logo {
+            width: 70px;
+            height: 70px;
+            background-color: var(--bg-main);
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            letter-spacing: 1px;
+        }
+
+        .login-card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .login-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        /* Columna Izquierda: Clientes Registrados y Logo */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo-img {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            object-fit: contain;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--accent-green);
+        }
+
+        .brand-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .btn-nuevo-cliente {
+            background-color: transparent;
+            border: 2px dashed var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .btn-nuevo-cliente:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+
+        .client-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 4px;
+        }
+
+        .client-card {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .client-card:hover, .client-card.active {
+            border-color: var(--accent-blue);
+            background-color: var(--bg-card-hover);
+        }
+
+        .client-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .client-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Panel Principal */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .builder-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-muted);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        input, select, textarea {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent-blue);
+        }
+
+        textarea {
+            resize: vertical;
+            height: 70px;
+        }
+
+        /* Selector de Productos Desplegable */
+        .product-selector-container {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .btn-agregar-producto {
+            width: 100%;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .btn-agregar-producto:hover {
+            border-color: var(--text-muted);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 6px;
+            z-index: 10;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--accent-blue);
+        }
+
+        /* Panel Derecho: Acumulado y Especificaciones */
+        .summary-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .items-preview {
+            flex: 1;
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .item-row {
+            background-color: var(--bg-main);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-row span {
+            color: var(--text-muted);
+        }
+
+        .btn-delete-item {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .total-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-align: center;
+            padding: 15px;
+            background-color: var(--bg-main);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+
+        .btn-action {
+            background-color: var(--accent-green);
+            color: #ffffff;
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn-action:hover {
+            background-color: var(--accent-green-hover);
+        }
+
+        /* Vista de Detalle del Cliente Seleccionado */
+        .client-detail-view {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        .client-detail-view strong {
+            color: var(--text-main);
+        }
+
+        .action-buttons-detail {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .btn-edit {
+            flex: 1;
+            background-color: var(--warning-yellow);
+            color: #121214;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-delete {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE ACCESO RESTRINGIDO (LOGIN CON LETRAS FC'S) -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <div class="login-logo">FC'S</div>
+            <h2>COTIZADOR FRANCO'S</h2>
+            <p>Ingrese sus credenciales de acceso</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; text-align: left;">
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="loginEmail" placeholder="taller@francos.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+            </div>
+            
+            <button class="btn-action" onclick="iniciarSesion()">ACCEDER AL SISTEMA</button>
+        </div>
+    </div>
+
+    <!-- Columna Izquierda: Panel con Logo e Historial de Clientes -->
+    <div class="sidebar">
+        <!-- Encabezado con Logo y Nombre de la Empresa -->
+        <div class="brand-container">
+            <img src="tu-logo.png" class="fcs.png">
+            <div class="brand-title">FRANCO'S STUDIO</div>
+        </div>
+
+        <h2>REGISTRO DE CLIENTES</h2>
+        <button class="btn-nuevo-cliente" onclick="resetFormulario()">+ Nuevo Cliente / Limpiar</button>
+        <div class="client-list" id="clientList">
+            <!-- Los clientes guardados se cargan desde la nube -->
+        </div>
+        <button style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.85rem; margin-top: auto; padding: 10px;" onclick="cerrarSesion()">Cerrar Sesión 🔓</button>
+    </div>
+
+    <!-- Panel Principal: Constructor de Cotización -->
+    <div class="main-content">
+        <div class="builder-section">
+            
+            <!-- Datos del Cliente -->
+            <div class="card">
+                <h3>DATOS DEL CLIENTE</h3>
+                <input type="hidden" id="editClienteId" value="">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre del Cliente</label>
+                        <input type="text" id="inputNombre" placeholder="Ej. Inversiones 3000">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" id="inputTelefono" placeholder="Ej. 0412-1234567">
+                    </div>
+                    <div class="form-group full">
+                        <label>Notas / Observaciones del Cliente</label>
+                        <textarea id="inputNotas" placeholder="Detalles específicos de diseño, lugar de instalación, etc."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ingreso de Medidas y Productos -->
+            <div class="card">
+                <h3>CONFIGURAR PRODUCTO</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Ancho (metros)</label>
+                        <input type="number" id="inputAncho" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Alto (metros)</label>
+                        <input type="number" id="inputAlto" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <!-- Menú Desplegable de Productos -->
+                <div class="product-selector-container">
+                    <button class="btn-agregar-producto" onclick="toggleDropdown()">
+                        <span id="selectedProductText">Seleccionar Producto ▾</span>
+                        <span>+</span>
+                    </button>
+                    <div class="dropdown-menu" id="productDropdown">
+                        <div class="dropdown-item" onclick="seleccionarProducto('Valla Publicitaria')">Valla Publicitaria (Con Estructura y Soportes)</div>
+                        <div class="dropdown-item" onclick="seleccionarProducto('Microperforado')">Microperforado (Vidriera - Sin Estructura)</div>
+                        <div class="dropdown-item" onclick="seleccionarProducto('Vinil Autoadhesivo')">Vinil Autoadhesivo (Sin Estructura)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Especificaciones Técnicas del Cliente Seleccionado -->
+            <div class="card" id="cardDetalleCliente" style="display:none;">
+                <h3>DETALLES TÉCNICOS DEL CLIENTE</h3>
+                <div class="client-detail-view" id="detalleClienteContenido"></div>
+            </div>
+
+        </div>
+
+        <!-- Panel Derecho: Acumulado y Totales -->
+        <div class="summary-section">
+            <div class="card" style="display: flex; flex-direction: column; height: 100%;">
+                <h3>ACUMULADO DE COTIZACIÓN</h3>
+                
+                <div class="items-preview" id="itemsPreview">
+                    <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">
+                        No hay productos agregados a esta cotización.
+                    </div>
+                </div>
+
+                <div>
+                    <label>TOTAL ESTIMADO</label>
+                    <div class="total-display" id="totalDisplay">$0.00</div>
+                    <button class="btn-action" id="btnGuardarTexto" onclick="guardarClienteEnNube()">REGISTRAR CLIENTE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE SUPABASE (Tus llaves reales)
+        const SUPABASE_URL = 'https://srkzltlxmjwqetwprmnd.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_k_eb01u1g_vn5O4kqosA1g_D95477mK';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let productoSeleccionado = '';
+        let itemsActuales = [];
+        let clientesRegistrados = [];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                document.getElementById('loginScreen').style.display = 'none';
+                cargarClientesDesdeNube();
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        });
+
+        async function iniciarSesion() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                alert('Credenciales incorrectas o acceso no autorizado.');
+                return;
+            }
+
+            document.getElementById('loginScreen').style.display = 'none';
+            cargarClientesDesdeNube();
+        }
+
+        async function cerrarSesion() {
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }
+
+        function toggleDropdown() {
+            document.getElementById('productDropdown').classList.toggle('show');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.btn-agregar-producto') && !event.target.matches('.btn-agregar-producto *')) {
+                const dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    let openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+
+        function seleccionarProducto(tipo) {
+            productoSeleccionado = tipo;
+            document.getElementById('selectedProductText').innerText = tipo;
+            document.getElementById('productDropdown').classList.remove('show');
+            agregarItemCotizacion();
+        }
+
+        function agregarItemCotizacion() {
+            const ancho = parseFloat(document.getElementById('inputAncho').value);
+            const alto = parseFloat(document.getElementById('inputAlto').value);
+
+            if (!ancho || !alto || ancho <= 0 || alto <= 0) {
+                alert('Por favor, ingrese un ancho y alto válidos antes de agregar el producto.');
+                return;
+            }
+
+            if (!productoSeleccionado) {
+                alert('Seleccione un tipo de producto.');
+                return;
+            }
+
+            let area = ancho * alto;
+            let subtotal = 0;
+            let detalleItem = {};
+
+            if (productoSeleccionado === 'Valla Publicitaria') {
+                let costoImpresion = area * 22;
+                let tipoTubo = alto > 1.3 ? "Tubo Reforzado (2x1\")" : "Tubo Estándar (1x1\")";
+                let costoTubo = alto > 1.3 ? 16 : 12;
+                
+                let perimetro = (ancho * 2) + (alto * 2);
+                let travesanos = Math.ceil(ancho / 1.2) * alto;
+                let metrosEstructura = perimetro + travesanos;
+                let tubosEstructura = Math.ceil(metrosEstructura / 6.0);
+
+                let soportes = Math.ceil(ancho / 3);
+                let metrosSoportes = soportes * alto; 
+                let tubosSoportes = Math.ceil(metrosSoportes / 6.0);
+
+                let cantidadTubosTotal = tubosEstructura + tubosSoportes;
+                let totalEstructuraMaterial = cantidadTubosTotal * costoTubo;
+                let costoSoportesExtra = soportes * 5; 
+
+                let costoMateriales = costoImpresion + totalEstructuraMaterial + costoSoportesExtra;
+                let manoDeObra = costoMateriales * 0.40;
+                subtotal = costoMateriales + manoDeObra;
+
+                detalleItem = {
+                    tipo: productoSeleccionado,
+                    ancho, alto, area,
+                    resumenText: `${productoSeleccionado} (${ancho}m x ${alto}m - ${area.toFixed(2)} m²)`,
+                    detalleTecnico: `• Impresión: ${area.toFixed(2)} m²\n• Estructura y Soportes: ${cantidadTubosTotal} tiras de ${tipoTubo} (${soportes} soporte(s))\n• Subtotal: $${subtotal.toFixed(2)}`,
+                    subtotal
+                };
+
+            } else if (productoSeleccionado === 'Microperforado') {
+                let costoImpresion = area * 25; 
+                let instalacion = costoImpresion * 0.30; 
+                subtotal = costoImpresion + instalacion;
+
+                detalleItem = {
+                    tipo: productoSeleccionado,
+                    ancho, alto, area,
+                    resumenText: `${productoSeleccionado} (${ancho}m x ${alto}m - ${area.toFixed(2)} m²)`,
+                    detalleTecnico: `• Impresión Vidriera: ${area.toFixed(2)} m²\n• Instalación (30%)\n• Subtotal: $${subtotal.toFixed(2)}`,
+                    subtotal
+                };
+
+            } else if (productoSeleccionado === 'Vinil Autoadhesivo') {
+                let costoImpresion = area * 18; 
+                let instalacion = costoImpresion * 0.30; 
+                subtotal = costoImpresion + instalacion;
+
+                detalleItem = {
+                    tipo: productoSeleccionado,
+                    ancho, alto, area,
+                    resumenText: `${productoSeleccionado} (${ancho}m x ${alto}m - ${area.toFixed(2)} m²)`,
+                    detalleTecnico: `• Impresión Vinil: ${area.toFixed(2)} m²\n• Instalación (30%)\n• Subtotal: $${subtotal.toFixed(2)}`,
+                    subtotal
+                };
+            }
+
+            itemsActuales.push(detalleItem);
+            renderItems();
+            
+            document.getElementById('inputAncho').value = '';
+            document.getElementById('inputAlto').value = '';
+            productoSeleccionado = '';
+            document.getElementById('selectedProductText').innerText = 'Seleccionar Producto ▾';
+        }
+
+        function renderItems() {
+            const container = document.getElementById('itemsPreview');
+            const totalDisplay = document.getElementById('totalDisplay');
+            
+            if (itemsActuales.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">No hay productos agregados a esta cotización.</div>`;
+                totalDisplay.innerText = '$0.00';
+                return;
+            }
+
+            let html = '';
+            let totalGeneral = 0;
+
+            itemsActuales.forEach((item, index) => {
+                totalGeneral += item.subtotal;
+                html += `
+                    <div class="item-row">
+                        <div>
+                            <strong>${item.resumenText}</strong><br>
+                            <span>Subtotal: $${item.subtotal.toFixed(2)}</span>
+                        </div>
+                        <button class="btn-delete-item" onclick="eliminarItem(${index})">×</button>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            totalDisplay.innerText = `$${totalGeneral.toFixed(2)}`;
+        }
+
+        function eliminarItem(index) {
+            itemsActuales.splice(index, 1);
+            renderItems();
+        }
+
+        async function cargarClientesDesdeNube() {
+            const { data, error } = await supabaseClient
+                .from('clientes')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                console.error('Error al cargar clientes:', error);
+                return;
+            }
+
+            clientesRegistrados = data || [];
+            renderClientes();
+        }
+
+        async function guardarClienteEnNube() {
+            const idEditando = document.getElementById('editClienteId').value;
+            const nombre = document.getElementById('inputNombre').value.trim();
+            const telefono = document.getElementById('inputTelefono').value.trim();
+            const notas = document.getElementById('inputNotas').value.trim();
+
+            if (!nombre) {
+                alert('Debe ingresar el nombre del cliente.');
+                return;
+            }
+
+            if (itemsActuales.length === 0) {
+                alert('Debe agregar al menos un producto a la cotización.');
+                return;
+            }
+
+            let totalCotizacion = itemsActuales.reduce((acc, item) => acc + item.subtotal, 0);
+
+            const datosCliente = {
+                nombre,
+                telefono,
+                notas,
+                items: itemsActuales,
+                total: totalCotizacion,
+                fecha: new Date().toLocaleDateString()
+            };
+
+            let error;
+            if (idEditando) {
+                const res = await supabaseClient.from('clientes').update(datosCliente).eq('id', idEditando);
+                error = res.error;
+            } else {
+                const res = await supabaseClient.from('clientes').insert([datosCliente]);
+                error = res.error;
+            }
+
+            if (error) {
+                alert('Error al guardar en la base de datos.');
+                console.error(error);
+                return;
+            }
+
+            alert('¡Guardado exitosamente en la nube!');
+            cargarClientesDesdeNube();
+            resetFormulario();
+        }
+
+        function renderClientes() {
+            const listContainer = document.getElementById('clientList');
+            if (clientesRegistrados.length === 0) {
+                listContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 20px;">No hay clientes registrados.</p>`;
+                return;
+            }
+
+            let html = '';
+            clientesRegistrados.forEach(c => {
+                html += `
+                    <div class="client-card" onclick="verDetalleCliente(${c.id})">
+                        <h4>${c.nombre}</h4>
+                        <p>${c.telefono || 'Sin teléfono'} • $${c.total.toFixed(2)}</p>
+                        <p style="font-size: 0.75px; color: var(--text-muted); margin-top: 4px;">${c.fecha}</p>
+                    </div>
+                `;
+            });
+            listContainer.innerHTML = html;
+        }
+
+        function verDetalleCliente(id) {
+            const cliente = clientesRegistrados.find(c => c.id == id);
+            if (!cliente) return;
+
+            const cardDetalle = document.getElementById('cardDetalleCliente');
+            const contenido = document.getElementById('detalleClienteContenido');
+            cardDetalle.style.display = 'block';
+
+            let itemsHtml = cliente.items.map(i => `<div style="margin-bottom: 8px;">• ${i.resumenText}<br><span style="font-size:0.8rem; color:var(--text-muted);">${i.detalleTecnico.replace(/\n/g, '<br>')}</span></div>`).join('');
+
+            contenido.innerHTML = `
+                <p><strong>Cliente:</strong> ${cliente.nombre}</p>
+                <p><strong>Teléfono:</strong> ${cliente.telefono || 'No especificado'}</p>
+                <p><strong>Notas:</strong> ${cliente.notas || 'Ninguna'}</p>
+                <p><strong>Fecha:</strong> ${cliente.fecha}</p>
+                <br>
+                <p><strong>Productos y Especificaciones:</strong><br><br>${itemsHtml}</p>
+                <br>
+                <p style="font-size: 1rem; color: var(--text-main);"><strong>Total Cotización: $${cliente.total.toFixed(2)}</strong></p>
+                
+                <div class="action-buttons-detail">
+                    <button class="btn-edit" onclick="cargarClienteParaEditar(${cliente.id})">✏️ Editar Cliente</button>
+                    <button class="btn-delete" onclick="eliminarClienteDeNube(${cliente.id}, '${cliente.nombre}')">🗑️ Eliminar</button>
+                </div>
+            `;
+        }
+
+        function cargarClienteParaEditar(id) {
+            const cliente = clientesRegistrados.find(c => c.id == id);
+            if (!cliente) return;
+
+            document.getElementById('editClienteId').value = cliente.id;
+            document.getElementById('inputNombre').value = cliente.nombre;
+            document.getElementById('inputTelefono').value = cliente.telefono;
+            document.getElementById('inputNotas').value = cliente.notas;
+            
+            itemsActuales = JSON.parse(JSON.stringify(cliente.items));
+            renderItems();
+
+            document.getElementById('btnGuardarTexto').innerText = 'ACTUALIZAR CAMBIOS';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function eliminarClienteDeNube(id, nombreCliente) {
+            // Cuadro de confirmación integrado con el nombre del cliente
+            const confirmar = confirm(`¿Está seguro que desea eliminar el registro del cliente "${nombreCliente}"? Esta acción no se puede deshacer.`);
+            if (!confirmar) return;
+            
+            const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
+            if (error) {
+                alert('No se pudo eliminar el registro.');
+                return;
+            }
+
+            alert('Cliente eliminado correctamente.');
+            cargarClientesDesdeNube();
+            resetFormulario();
+        }
+
+        function resetFormulario() {
+            document.getElementById('editClienteId').value = '';
+            document.getElementById('inputNombre').value = '';
+            document.getElementById('inputTelefono').value = '';
+            document.getElementById('inputNotas').value = '';
+            document.getElementById('inputAncho').value = '';
+            document.getElementById('inputAlto').value = '';
+            document.getElementById('btnGuardarTexto').innerText = 'REGISTRAR CLIENTE';
+            itemsActuales = [];
+            renderItems();
+            document.getElementById('cardDetalleCliente').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
